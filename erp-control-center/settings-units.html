@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Units &amp; Modules — ERP Control Center</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+  <div id="appShell" class="app-shell"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/components.js"></script>   
+  <script src="js/app.js"></script>
+  <script>
+    if (App.init('settings-units', 'Units & Modules')) {
+      renderUnitsModulesPage();
+    }
+
+    function renderUnitsModulesPage() {
+      const root = document.getElementById('pageRoot');
+      root.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Units &amp; Modules</h1>
+            <div class="desc">Add or remove the units and modules shown across the app.</div>
+          </div>
+        </div>
+
+        <div class="vendor-grid">
+          <!-- Units -->
+          <div class="card card-pad">
+            <div class="drawer-section">
+              <div class="h">Units</div>
+              <div class="filter-bar" style="margin-bottom:14px;">
+                <div class="search-input" style="flex:1;">
+                  <input id="newUnitInput" placeholder="e.g. CBE, MDU, SLM…" />
+                </div>
+                <button class="btn btn-primary btn-sm" id="addUnitBtn">Add unit</button>
+              </div>
+              <div id="unitsList"></div>
+            </div>
+          </div>
+
+          <!-- Modules -->
+          <div class="card card-pad">
+            <div class="drawer-section">
+              <div class="h">Modules</div>
+              <div class="filter-bar" style="margin-bottom:14px;">
+                <div class="search-input" style="flex:1;">
+                  <input id="newModuleInput" placeholder="e.g. Maintenance, HR…" />
+                </div>
+                <button class="btn btn-primary btn-sm" id="addModuleBtn">Add module</button>
+              </div>
+              <div id="modulesList"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      renderUnitsList();
+      renderModulesList();
+
+      document.getElementById('addUnitBtn').addEventListener('click', addUnit);
+      document.getElementById('addModuleBtn').addEventListener('click', addModule);
+
+      document.getElementById('newUnitInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addUnit(); }
+      });
+      document.getElementById('newModuleInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addModule(); }
+      });
+    }
+
+    /* ---------- Units ---------- */
+    function renderUnitsList() {
+      const units = Store.get().units || [];
+      const el = document.getElementById('unitsList');
+      if (!units.length) {
+        el.innerHTML = `<div class="empty-state" style="padding:24px;"><p>No units yet.</p></div>`;
+        return;
+      }
+      el.innerHTML = units.map((u) => `
+        <div class="kv-row">
+          <span class="k" style="font-weight:600;color:var(--text);">${u}</span>
+          <button class="btn btn-danger btn-sm" data-remove-unit="${u}">Remove</button>
+        </div>
+      `).join('');
+      el.querySelectorAll('[data-remove-unit]').forEach((btn) => {
+        btn.addEventListener('click', () => removeUnit(btn.getAttribute('data-remove-unit')));
+      });
+    }
+
+    function addUnit() {
+      const input = document.getElementById('newUnitInput');
+      const val = input.value.trim().toUpperCase();
+      if (!val) return;
+
+      const state = Store.get();
+      if (state.units.includes(val)) {
+        renderToast(`Unit "${val}" already exists`, 'warn');
+        return;
+      }
+      Store.set({ units: [...state.units, val] });
+      input.value = '';
+      renderUnitsList();
+      refreshUnitDropdown();
+      renderToast(`Unit "${val}" added`, 'success');
+    }
+
+    function removeUnit(name) {
+      const state = Store.get();
+      if (state.unit === name) Store.set({ unit: 'All Units' });
+      Store.set({ units: state.units.filter((u) => u !== name) });
+      renderUnitsList();
+      refreshUnitDropdown();
+      renderToast(`Unit "${name}" removed`, 'success');
+    }
+
+    /* ---------- Modules ---------- */
+    function renderModulesList() {
+      const modules = Store.get().modules || [];
+      const el = document.getElementById('modulesList');
+      if (!modules.length) {
+        el.innerHTML = `<div class="empty-state" style="padding:24px;"><p>No modules yet.</p></div>`;
+        return;
+      }
+      el.innerHTML = modules.map((m) => `
+        <div class="kv-row">
+          <span class="k" style="font-weight:600;color:var(--text);">${m}</span>
+          <button class="btn btn-danger btn-sm" data-remove-module="${m}">Remove</button>
+        </div>
+      `).join('');
+      el.querySelectorAll('[data-remove-module]').forEach((btn) => {
+        btn.addEventListener('click', () => removeModule(btn.getAttribute('data-remove-module')));
+      });
+    }
+
+    function addModule() {
+      const input = document.getElementById('newModuleInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      const state = Store.get();
+      const exists = state.modules.some((m) => m.toLowerCase() === val.toLowerCase());
+      if (exists) {
+        renderToast(`Module "${val}" already exists`, 'warn');
+        return;
+      }
+      const canonical = val.charAt(0).toUpperCase() + val.slice(1);
+      Store.set({ modules: [...state.modules, canonical] });
+      input.value = '';
+      renderModulesList();
+      renderToast(`Module "${canonical}" added`, 'success');
+    }
+
+    function removeModule(name) {
+      const state = Store.get();
+      Store.set({ modules: state.modules.filter((m) => m !== name) });
+      renderModulesList();
+      renderToast(`Module "${name}" removed`, 'success');
+    }
+
+    /* ---------- Keep topbar dropdown in sync ---------- */
+    function refreshUnitDropdown() {
+      const sel = document.getElementById('unitSelect');
+      if (!sel) return;
+      const state = Store.get();
+      const current = state.unit || 'All Units';
+      sel.innerHTML = ['All Units', ...state.units]
+        .map((u) => `<option value="${u}" ${current === u ? 'selected' : ''}>${u}</option>`)
+        .join('');
+    }
+  </script>
+</body>
+</html>

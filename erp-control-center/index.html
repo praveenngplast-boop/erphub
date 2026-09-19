@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign in — ERP Control Center</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <form class="login-card" id="loginForm" autocomplete="off">
+      <div class="login-mark">GP</div>
+      <h1>ERP Control Center</h1>
+      <div class="sub">G Plast Industries — sign in to continue</div>
+
+      <div class="login-error" id="loginError">Incorrect username or password.</div>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" name="username" placeholder="admin" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="••••••••" />
+      </div>
+
+      <button class="btn btn-primary" type="submit" style="width:100%;justify-content:center;padding:10px;">Sign in</button>
+
+      <div class="login-demo">
+        Demo accounts — <code>admin / admin123</code>, <code>manager / manager123</code>, <code>user / user123</code>
+      </div>
+    </form>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    const DEMO_ACCOUNTS = {
+      admin:   { password: 'admin123',   name: 'Praveen K',    role: 'ERP Assistant' },
+      manager: { password: 'manager123', name: 'Meenakshi R',  role: 'Production Head' },
+      user:    { password: 'user123',    name: 'Divya Sankar', role: 'Sales Executive' },
+    };
+
+    // If already signed in, skip straight to dashboard.
+    (function () {
+      const state = Store.get();
+      if (state.session) window.location.href = 'dashboard.html';
+    })();
+
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim().toLowerCase();
+      const p = document.getElementById('password').value;
+      const account = DEMO_ACCOUNTS[u];
+      const errBox = document.getElementById('loginError');
+      if (account && account.password === p) {
+        Store.set({ session: { username: u, name: account.name, role: account.role } });
+        window.location.href = 'dashboard.html';
+      } else {
+        errBox.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — ERP Control Center</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+  <div id="appShell" class="app-shell"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="jS/components.js"></script>
+  
+  <script src="js/app.js"></script>
+  <script>
+    if (App.init('dashboard', 'Dashboard')) {
+      const root = document.getElementById('pageRoot');
+      const state = Store.get();
+      root.innerHTML = `
+        <div class="page-head">
+          <div><h1>Dashboard</h1><div class="desc">Overview of tickets, tasks and vendors</div></div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="label">Tickets</div><div class="val">${(state.tickets || []).length}</div></div>
+          <div class="kpi"><div class="label">Tasks</div><div class="val">${(state.tasks || []).length}</div></div>
+          <div class="kpi"><div class="label">Vendors</div><div class="val">${(state.vendors || []).length}</div></div>
+          <div class="kpi"><div class="label">Units</div><div class="val">${(state.units || []).length}</div></div>
+          <div class="kpi"><div class="label">Modules</div><div class="val">${(state.modules || []).length}</div></div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

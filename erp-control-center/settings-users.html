@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Users — ERP Control Center</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+  <div id="appShell" class="app-shell"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (App.init('settings-users', 'Users')) renderUsersPage();
+
+    function renderUsersPage() {
+      const root = document.getElementById('pageRoot');
+      root.innerHTML = `
+        <div class="page-head">
+          <div>
+            <h1>Users</h1>
+            <div class="desc">Add, edit or remove users. Changes are saved locally.</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary" id="newUserBtn">${ICONS.plus} New User</button>
+          </div>
+        </div>
+        <div id="usersHost"></div>
+      `;
+
+      renderUserTable();
+
+      document.getElementById('newUserBtn').addEventListener('click', () => openUserForm());
+    }
+
+    function renderUserTable() {
+      const users = Store.get().users || [];
+      const html = renderDataTable({
+        tableId: 'usersTable',
+        columns: [
+          { label: 'ID',       render: (u) => `<span class="id-cell">${u.id}</span>` },
+          {
+            label: 'Name',
+            render: (u) => `<div class="avatar-row">${renderAvatar(u.name, 26)}<span class="name">${u.name}</span></div>`,
+          },
+          { label: 'Role',     key: 'role' },
+          { label: 'Unit',     key: 'unit' },
+          {
+            label: 'Actions',
+            render: (u) => `
+              <div style="display:flex;gap:6px;" onclick="event.stopPropagation()">
+                <button class="btn btn-secondary btn-sm" data-edit-user="${u.id}">Edit</button>
+                <button class="btn btn-danger btn-sm" data-remove-user="${u.id}">Remove</button>
+              </div>
+            `,
+          },
+        ],
+        rows: users,
+        emptyTitle: 'No users yet',
+        emptyDesc: 'Click "New User" to add one.',
+      });
+
+      document.getElementById('usersHost').innerHTML = html;
+
+      // Wire edit / remove buttons
+      document.querySelectorAll('[data-edit-user]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-edit-user');
+          const user = (Store.get().users || []).find((u) => u.id === id);
+          if (user) openUserForm(user);
+        });
+      });
+
+      document.querySelectorAll('[data-remove-user]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-remove-user');
+          removeUser(id);
+        });
+      });
+    }
+
+    function openUserForm(existing) {
+      const isEdit = !!existing;
+      const units = Store.get().units || [];
+      const user = existing || { name: '', role: '', unit: units[0] || '', color: '#b45f16' };
+
+      renderModal({
+        title: isEdit ? 'Edit User' : 'New User',
+        bodyHtml: `
+          <div class="field">
+            <label>Full name</label>
+            <input id="ufName" value="${user.name}" placeholder="e.g. Ravi Kumar" />
+          </div>
+          <div class="field">
+            <label>Role / Designation</label>
+            <input id="ufRole" value="${user.role}" placeholder="e.g. Production Head" />
+          </div>
+          <div class="field">
+            <label>Unit</label>
+            <select id="ufUnit">
+              ${units.map((u) => `<option ${u === user.unit ? 'selected' : ''}>${u}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Avatar colour</label>
+            <input id="ufColor" type="color" value="${user.color}" style="height:38px;padding:3px;" />
+          </div>
+        `,
+        footHtml: `
+          <button class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button class="btn btn-primary" id="ufSaveBtn">${isEdit ? 'Save changes' : 'Create user'}</button>
+        `,
+      });
+
+      document.getElementById('ufSaveBtn').addEventListener('click', () => {
+        const name  = document.getElementById('ufName').value.trim();
+        const role  = document.getElementById('ufRole').value.trim();
+        const unit  = document.getElementById('ufUnit').value;
+        const color = document.getElementById('ufColor').value;
+
+        if (!name) { renderToast('Name is required', 'error'); return; }
+
+        const s = Store.get();
+        const users = [...(s.users || [])];
+
+        if (isEdit) {
+          const idx = users.findIndex((u) => u.id === existing.id);
+          if (idx > -1) users[idx] = { ...users[idx], name, role, unit, color };
+        } else {
+          users.push({ id: Utils.uid('U'), name, role, unit, color });
+        }
+
+        Store.set({ users });
+        renderToast(isEdit ? 'User updated' : 'User created', 'success');
+        closeModal('appModal');
+        renderUserTable();
+      });
+    }
+
+    function removeUser(id) {
+      const user = (Store.get().users || []).find((u) => u.id === id);
+      if (!user) return;
+      if (!confirm(`Remove ${user.name}? This cannot be undone.`)) return;
+
+      const users = (Store.get().users || []).filter((u) => u.id !== id);
+      Store.set({ users });
+      renderToast(`Removed ${user.name}`, 'success');
+      renderUserTable();
+    }
+  </script>
+</body>
+</html>
